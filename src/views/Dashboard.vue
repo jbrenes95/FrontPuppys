@@ -1,43 +1,45 @@
 <template>
   <div class="row justify-center">
-    <div class="col-7">
-      <div class="q-pa-md" style="max-width: 350px">
+    <div class="col">
+      <div class="q-pa-md">
         <showdog />
         <showvaccines />
+        <q-fab
+          v-if="!showButtons"
+          color="primary"
+          icon="keyboard_arrow_up"
+          direction="up"
+          class="fabuttons"
+        >
+          <q-fab-action
+            label-position="left"
+            color="primary"
+            @click="editDog"
+            label="Editar"
+          />
+          <q-fab-action color="primary" @click="deleteDog" label="Borrar" />
+          <q-fab-action
+            color="primary"
+            @click="showAddVaccine"
+            label="Añadir Vacuna"
+          />
+        </q-fab>
       </div>
     </div>
-    <div class="col-5">
-      <q-btn
-        label="Insertar Vacuna"
-        type="submit"
-        color="primary"
-        v-on:click="showAddVaccine"
-      />
-
-      <createvaccine v-if="!addVaccine" />
+    <div class="col">
       <calendar />
     </div>
-    <q-fab color="primary" icon="keyboard_arrow_up" direction="up">
-      <q-fab-action
-        label-position="left"
-        color="primary"
-        @click="editDog"
-        label="Editar"
-      />
-      <q-fab-action color="primary" @click="deleteDog" label="Borrar" />
-    </q-fab>
   </div>
 </template>
 <script>
-import axios from "axios";
 import firebase from "firebase";
-import createvaccine from "../components/CreateVaccine";
 import showdog from "../components/ShowDog";
 import showvaccines from "../components/ShowVaccines";
 import calendar from "../components/Calendar";
+import { axios } from "../apis/axios";
+import constants from "../constants";
 export default {
   components: {
-    createvaccine,
     showdog,
     showvaccines,
     calendar,
@@ -46,32 +48,37 @@ export default {
     return {
       addVaccine: true,
       idDog: "",
-      urlBaseDog: "http://vps-b0e4feec.vps.ovh.net:8000/api/dog/",
+      urlBaseDog: constants.urlsApi.dog,
+      showButtons: true,
     };
   },
   methods: {
     showAddVaccine: function() {
-      if (this.addVaccine) {
-        this.addVaccine = false;
-      } else {
-        this.addVaccine = true;
-      }
+      this.$router.push(constants.routes.editVaccines);
     },
 
     deleteDog: function() {
-      axios.delete(this.urlBaseDog + this.idDog).then(() => {
-        this.$root.$emit("refresh", firebase.auth().currentUser.uid);
-        this.$router.push("/home");
-      });
+      axios
+        .delete(this.urlBaseDog + this.idDog)
+        .then(() => {
+          this.$root.$emit("refresh", firebase.auth().currentUser.uid);
+          this.$root.$emit("clenaDog", {});
+        })
+        .catch((err) => alert(err.response.data.message));
     },
     editDog: function() {
-      this.$router.push("/edit");
+      this.$router.push(constants.routes.edit);
     },
   },
   mounted() {
     this.$root.$on("update", (idDog) => {
       this.idDog = idDog;
     });
+    // oculta un boton
+    this.$root.$on(
+      "showbutton",
+      (visibility) => (this.showButtons = visibility)
+    );
   },
 };
 </script>
@@ -79,5 +86,8 @@ export default {
 <style scoped>
 div {
   text-align: center;
+}
+.fabuttons {
+  margin-left: 50%;
 }
 </style>

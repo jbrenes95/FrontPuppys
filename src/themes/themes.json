@@ -1,0 +1,32 @@
+  
+{
+    "default": {
+      "primary": "#027BE3",
+      "secondary": "#26A69A",
+      "accent": "#9C27B0",
+      "background": "#FFFFFF",
+      "drawer": "#EEEEEE",
+      "placeholder": "#027BE3",
+      "text": "#000000",
+      "title": "#FFFFFF",
+      "icons": "#000000"
+    },
+    "tropicalForest": {
+      "primary": "#364958",
+      "secondary": "#3B6064",
+      "accent": "#55828B",
+      "background": "#C9E4CA",
+      "drawer": "#87BBA2",
+      "placeholder": "#364958",
+      "text": "#000000",
+      "title": "#FFFFFF",
+      "icons": "#000000"
+    },
+    "brenesTheme": {
+      "primary": "#E86252",
+      "secondary": "#ABA9BF",
+      "accent": "#C1D37F",
+      "background": "#ABA9BF",
+      "drawer": "#BEB7DF"
+    }
+  }

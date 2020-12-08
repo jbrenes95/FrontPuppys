@@ -6,12 +6,21 @@ import store from './store'
 import './quasar'
 import axios from "axios";
 import firebase from 'firebase';
-import "./components/firebase";
+import "./apis/firebase";
+import { changeTheme} from "./themes/index";
 
 Vue.config.productionTip = false
 
 let app;
-firebase.auth().onAuthStateChanged(user=>{
+firebase.auth().onAuthStateChanged(() =>{
+  const user = firebase.auth().currentUser
+  const db = firebase.firestore();
+if(user != null){
+  db.collection("userThemes").doc(user.uid).get().then(theme =>{
+    changeTheme(theme.data().theme);
+  });
+}
+changeTheme('default');
 if(!app){
  app = new Vue({
     router,

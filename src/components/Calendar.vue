@@ -1,7 +1,6 @@
 <template>
   <div>
     <Fullcalendar :options="calendarOptions" />
-
     <q-dialog v-model="dialog" :position="position">
       <q-card style="width: 350px">
         <q-card-section class="row items-center no-wrap">
@@ -10,12 +9,19 @@
               rounded
               outlined
               v-model="newEvent.title"
-              label="Rounded outlined"
+              label="Titulo del evento"
             />
             <template>
+              <q-chip
+                color="secondary"
+                text-color="white"
+                icon="alarm"
+                label="Fecha Inicio"
+              />
               <div class="q-pa-md" style="max-width: 300px">
                 <q-input
-                  filled
+                  rounded
+                  outlined
                   v-model="newEvent.startStr"
                   mask="date"
                   :rules="['date']"
@@ -45,9 +51,16 @@
             </template>
 
             <template>
+              <q-chip
+                color="secondary"
+                text-color="white"
+                icon="alarm"
+                label="Fecha Fin"
+              />
               <div class="q-pa-md" style="max-width: 300px">
                 <q-input
-                  filled
+                  rounded
+                  outlined
                   v-model="newEvent.endStr"
                   mask="date"
                   :rules="['date']"
@@ -77,20 +90,22 @@
             </template>
             <q-btn
               v-if="add"
-              label="Añadir Evento"
-              color="primary"
+              label="Añadir"
+              color="secondary"
               @click="saveEvent"
             />
             <q-btn
+              class="q-ml-sm"
               v-if="!edit"
-              label="Actualizar Evento"
-              color="warning"
+              label="Actualizar"
+              color="secondary"
               @click="updateEvent"
             />
             <q-btn
+              class="q-ml-sm"
               v-if="!deleted"
-              label="Borrar Evento"
-              color="negative"
+              label="Borrar"
+              color="secondary"
               @click="deleteEvent"
             />
           </div>
@@ -107,7 +122,8 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import es from "@fullcalendar/core/locales/es";
 import moment from "moment";
 import firebase from "firebase";
-import axios from "axios";
+import { axios } from "../apis/axios";
+import constants from "../constants";
 
 export default {
   components: {
@@ -121,27 +137,28 @@ export default {
       deleted: true,
       newEvent: {
         id: "",
-        user_id: "",
+        userId: "",
         title: "",
         startStr: "",
         endStr: "",
       },
       editEvent: {
         id: "",
-        user_id: "",
+        userId: "",
         title: "",
         startStr: "",
         endStr: "",
       },
       position: "top",
+      //Objeto de configuracion de FullCalendar
       calendarOptions: {
         plugins: [dayGridPlugin, interactionPlugin, timeGridPlugin],
         initialView: "dayGridMonth",
         locale: es,
         selectable: true,
         initialEvents: this.events,
-        select: this.handleSelect,
-        eventClick: this.handleEvents,
+        select: this.dragEventCalendar,
+        eventClick: this.captureClickEventCalendar,
         events: [],
         editable: true,
         selectMirror: true,
@@ -157,50 +174,64 @@ export default {
           day: "Dia",
         },
       },
-      urlCalendar: "http://vps-b0e4feec.vps.ovh.net:8000/api/calendar/",
+      urlCalendar: constants.urlsApi.calendar,
+      urlEmail: constants.urlsApi.mail,
+      currentUser: "",
     };
   },
   created() {
     this.getIduser();
     this.getEvents();
+    //recibe la fecha de la siguiente vacuna y añade un evento en el calendario
     this.$root.$on("expiration", (expiracion) => {
-      const nes = {
-        user_id: this.newEvent.user_id,
+      let nextVaccine = {
+        userId: this.newEvent.userId,
         title: "Proxima Vacuna",
         startStr: expiracion,
         endStr: moment(expiracion)
           .add(1, "days")
           .format("YYYY-MM-DD"),
       };
-      this.newEvent = nes;
-      console.log(this.newEvent);
+      this.newEvent = nextVaccine;
       this.saveEvent();
+      this.sendEmail(expiracion);
+
       this.newEvent = "";
     });
   },
   methods: {
+    sendEmail(expiracion) {
+      const mail = {
+        email: this.currentUser.email,
+        expiracion: expiracion,
+        nameDog: this.$store.state.UsersDog.name,
+      };
+      axios
+        .post(this.urlEmail, mail)
+        .catch((err) => console.log(err.response.data));
+    },
     getIduser() {
-      this.newEvent.user_id = firebase.auth().currentUser.uid;
+      this.currentUser = firebase.auth().currentUser;
+      this.newEvent.userId = this.currentUser.uid;
     },
     open(position) {
       this.position = position;
       this.dialog = true;
     },
-    handleSelect(arg) {
+    dragEventCalendar(eventCalendar) {
       this.dialog = true;
       this.resetForm();
       this.newEvent = {
-        user_id: this.newEvent.user_id,
-        title: arg.title,
-        startStr: arg.startStr,
-        endStr: arg.endStr,
+        userId: this.newEvent.userId,
+        title: eventCalendar.title,
+        startStr: eventCalendar.startStr,
+        endStr: eventCalendar.endStr,
       };
     },
-
     deleteEvent() {
       axios
         .delete(this.urlCalendar + this.newEvent.id)
-        .then((e) => {
+        .then(() => {
           this.getEvents();
           this.dialog = false;
           this.resetForm();
@@ -211,7 +242,7 @@ export default {
     saveEvent() {
       this.dialog = false;
       this.calendarOptions.events.push({
-        user_id: this.newEvent.user_id,
+        userId: this.newEvent.userId,
         title: this.newEvent.title,
         startStr: moment(this.newEvent.startStr).format("YYYY-MM-DD"),
         endStr: moment(this.newEvent.endStr).format("YYYY-MM-DD"),
@@ -219,30 +250,31 @@ export default {
 
       axios
         .post(this.urlCalendar, this.newEvent)
-        .then((e) => {
+        .then(() => {
           this.getEvents();
         })
         .catch((err) => console.log(err.response.data));
     },
     getEvents() {
       axios
-        .get(this.urlCalendar + this.newEvent.user_id)
-        .then((e) => {
-          this.calendarOptions.events = e.data;
+        .get(this.urlCalendar + this.newEvent.userId)
+        .then((events) => {
+          this.calendarOptions.events = events.data;
         })
-        .catch((err) => console.log(err.response.data));
+        .catch((err) => alert(err.response.data));
     },
-    handleEvents(arg) {
+    captureClickEventCalendar(event) {
+      //metodo de captura del evento click
       this.add = false;
       this.dialog = true;
       this.edit = false;
       this.deleted = false;
       this.newEvent = {
-        id: arg.event.id,
-        user_id: this.newEvent.user_id,
-        title: arg.event.title,
-        startStr: moment(arg.event.startStr).format("YYYY-MM-DD"),
-        endStr: moment(arg.event.endtStr).format("YYYY-MM-DD"),
+        id: event.event.id,
+        userId: this.newEvent.userId,
+        title: event.event.title,
+        startStr: moment(event.event.startStr).format("YYYY-MM-DD"),
+        endStr: moment(event.event.endtStr).format("YYYY-MM-DD"),
       };
       this.add = true;
     },
@@ -250,19 +282,18 @@ export default {
     updateEvent() {
       this.editEvent = {
         id: this.newEvent.id,
-        user_id: this.newEvent.user_id,
+        userId: this.newEvent.userId,
         title: this.newEvent.title,
         startStr: moment(this.newEvent.startStr).format("YYYY-MM-DD"),
         endStr: moment(this.newEvent.endStr).format("YYYY-MM-DD"),
       };
-
       axios
         .put(this.urlCalendar + this.editEvent.id, this.editEvent)
-        .then((e) => {
+        .then(() => {
           this.getEvents();
           this.dialog = false;
         })
-        .catch((err) => console.log(err.response.data));
+        .catch((err) => alert(err.response.data));
       this.resetForm();
     },
     resetForm() {

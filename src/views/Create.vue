@@ -1,19 +1,29 @@
 <template>
-  <div class="q-pa-md" style="max-width: 400px">
-    <q-form class="q-gutter-md">
+  <div>
+    <q-form class="div-form" ref="myForm">
       <q-input
         rounded
         outlined
+        class="q-mt-md"
         :rules="[(val) => val.length > 0 || 'No puede estar vacio']"
         v-model="dog.name"
-        label="Tu nombre"
+        label="Nombre"
       />
-      <q-input rounded outlined type="file" @change="loadImage" />
 
+      <q-input
+        rounded
+        outlined
+        type="file"
+        class="upload-file"
+        @change="loadImage"
+        label="sdas"
+      />
+      <button class="upload-button">Subir Imagen</button>
       <q-input
         :rules="[(val) => val.length > 0 || 'No puede estar vacio']"
         rounded
         outlined
+        class="q-mt-md"
         type="number"
         v-model="dog.weight"
         label="Peso"
@@ -22,13 +32,14 @@
         rounded
         outlined
         v-model="dog.size"
-        label="tamaño
+        label="Tamaño
         "
         :rules="[(val) => val.length > 0 || 'No puede estar vacio']"
       />
       <q-input rounded outlined v-model="dog.race" label="Raza" />
 
       <q-select
+        class="q-mt-md"
         rounded
         outlined
         v-model="dog.sex"
@@ -37,6 +48,7 @@
       />
 
       <q-input
+        class="q-mt-lg"
         :rules="[(val) => val.length > 0 || 'No puede estar vacio']"
         rounded
         outlined
@@ -83,7 +95,7 @@
         v-model="chipDate"
         mask="date"
         :rules="['date']"
-        label="Fecha en la que pusiste el Chip"
+        label="Fecha de colocacion de Chip"
       >
         <template v-slot:append>
           <q-icon name="event" class="cursor-pointer">
@@ -102,26 +114,25 @@
         </template>
       </q-input>
 
-      <q-card class="my-card">
-        <h3>VACUNAS</h3>
-
-        <q-select
-          rounded
-          outlined
-          option-value="id"
-          option-label="name"
-          v-model="selectVaccine"
-          :options="vaccines"
-          label="Ultima Vacuna"
-        />
-
+      <q-card class="card-vaccines">
         <q-card-section>
+          <q-select
+            rounded
+            outlined
+            class="q-pb-md"
+            option-value="id"
+            option-label="name"
+            v-model="selectVaccine"
+            :options="vaccines"
+            label="Ultima Vacuna"
+          />
+
           <q-input
             :rules="[(val) => val.length > 0 || 'No puede estar vacio']"
             rounded
             outlined
             v-model="veterinary"
-            label="Veterinario de la vacuna"
+            label="Veterinario"
           />
 
           <q-input
@@ -156,6 +167,7 @@
           label="Enviar"
           type="submit"
           color="primary"
+          style="margin: 5% 0 5% 40%"
           v-on:click="saveDog"
         />
       </div>
@@ -164,9 +176,10 @@
 </template>
 
 <script>
-import axios from "axios";
+import { axios } from "../apis/axios";
 import moment from "moment";
 import firebase from "firebase";
+import constants from "../constants";
 export default {
   data() {
     return {
@@ -176,7 +189,7 @@ export default {
       veterinary: "",
       selectVaccine: {},
       dog: {
-        user_id: "",
+        userId: "",
         name: "",
         photo: "",
         weight: "",
@@ -198,19 +211,20 @@ export default {
       },
       options: ["Macho", "Hembra"],
       vaccines: [],
-      urlVaccines: "http://vps-b0e4feec.vps.ovh.net:8000/api/vaccines/",
-      urlBaseDog: "http://vps-b0e4feec.vps.ovh.net:8000/api/dog/",
+      urlVaccines: constants.urlsApi.vaccines,
+      urlBaseDog: constants.urlsApi.dog,
     };
   },
   created() {
-    axios.get(this.urlVaccines).then((e) => {
-      const response = e.data;
-      response.forEach((element) => {
-        this.vaccines.push(element);
-      });
-    });
+    axios
+      .get(this.urlVaccines)
+      .then((vaccines) => {
+        vaccines.data.forEach((vaccine) => {
+          this.vaccines.push(vaccine);
+        });
+      })
+      .catch((err) => alert(err.response.data.message));
     this.getIduser();
-
     this.selectVaccine = "";
   },
   methods: {
@@ -221,6 +235,7 @@ export default {
       this.dog.vaccine.expiration = moment(this.vaccination_date)
         .add(this.selectVaccine.days, "days")
         .format("YYYY-MM-DD");
+      console.log(this.dog.vaccine.expiration);
       this.$root.$emit("expiration", this.dog.vaccine.expiration);
     },
     formatDate() {
@@ -230,14 +245,21 @@ export default {
         "YYYY-MM-DD"
       );
     },
-    saveDog(e) {
+    saveDog() {
+      this.$refs.myForm.validate().then((success) => {
+        success ? this.saveDogApi() : this.$q.notify(constants.alert);
+      });
+    },
+    saveDogApi() {
       this.formatDate();
       this.prepareVaccine();
-      this.$router.push("/");
-      /*axios.post(this.urlBaseDog, this.dog).then((e) => {
-        this.$root.$emit("refresh", this.dog.user_id);
-       
-      });*/
+      this.$router.push(constants.routes.dashboard);
+      axios
+        .post(this.urlBaseDog, this.dog)
+        .then(() => {
+          this.$root.$emit("refresh", this.dog.userId);
+        })
+        .catch((err) => alert(err.response.data.message));
     },
     loadImage(e) {
       const fileReader = new FileReader();
@@ -247,8 +269,30 @@ export default {
       };
     },
     getIduser() {
-      this.dog.user_id = firebase.auth().currentUser.uid;
+      this.dog.userId = firebase.auth().currentUser.uid;
     },
   },
 };
 </script>
+<style scoped>
+.div-form {
+  max-width: 30%;
+  margin-left: 40%;
+  border-radius: 5%;
+}
+.card-vaccines {
+  border-radius: 5%;
+}
+.upload-file {
+  opacity: 0;
+  position: absolute;
+}
+.upload-button {
+  border-radius: 5%;
+  border: none;
+  color: "primary";
+  width: 268px;
+  height: 50px;
+  background: var(--q-color-primary) !important;
+}
+</style>

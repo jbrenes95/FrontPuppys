@@ -1,27 +1,48 @@
 <template>
-  <q-card-section>
-    <q-input
-      type="email"
-      v-model="email"
-      :rules="[(val) => val.length > 0 || 'No puede estar vacio']"
-      rounded
-      outlined
-      label="Email"
-    />
-    <q-input
-      type="password"
-      v-model="password"
-      :rules="[(val) => val.length > 0 || 'No puede estar vacio']"
-      rounded
-      outlined
-      label="Contraseña"
-    />
-
-    <q-btn label="Register" @click="register" type="submit" color="primary" />
-  </q-card-section>
+  <q-page class=" window-height window-width row justify-center items-center">
+    <div class="column">
+      <div class="row">
+        <q-card square bordered class="q-pa-lg shadow-1">
+          <q-card-section>
+            <q-form ref="myForm" class="q-gutter-md">
+              <q-input
+                square
+                filled
+                clearable
+                :rules="[(val) => val.length > 0 || 'No puede estar vacio']"
+                v-model="email"
+                type="email"
+                label="Email"
+              />
+              <q-input
+                square
+                filled
+                clearable
+                :rules="[(val) => val.length > 0 || 'No puede estar vacio']"
+                v-model="password"
+                type="password"
+                label="Password"
+              />
+            </q-form>
+          </q-card-section>
+          <q-card-actions class="q-px-md">
+            <q-btn
+              unelevated
+              color="primary"
+              size="lg"
+              class="full-width"
+              v-on:click="register"
+              label="Register"
+            />
+          </q-card-actions>
+        </q-card>
+      </div>
+    </div>
+  </q-page>
 </template>
 <script>
 import firebase from "firebase";
+import constants from "../constants";
 export default {
   name: "register",
   data: function() {
@@ -31,7 +52,12 @@ export default {
     };
   },
   methods: {
-    register: function(e) {
+    register: function() {
+      this.$refs.myForm.validate().then((success) => {
+        success ? this.saveUserApi() : this.$q.notify(constants.alert);
+      });
+    },
+    saveUserApi() {
       firebase
         .auth()
         .createUserWithEmailAndPassword(this.email, this.password)
@@ -44,8 +70,6 @@ export default {
             alert(err.message);
           }
         );
-
-      e.preventDefault();
     },
   },
 };

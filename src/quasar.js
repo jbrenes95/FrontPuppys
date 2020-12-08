@@ -3,11 +3,14 @@ import Vue from 'vue'
 import './styles/quasar.sass'
 import lang from 'quasar/lang/es.js'
 import '@quasar/extras/material-icons/material-icons.css'
-import { Quasar } from 'quasar'
+import { Quasar, Notify } from 'quasar'
 
 Vue.use(Quasar, {
-  config: {},
+  config: {
+    notify:{}
+  },
   plugins: {
+    Notify
   },
   lang: lang
  })

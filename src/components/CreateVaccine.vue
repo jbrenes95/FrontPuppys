@@ -1,22 +1,23 @@
 <template>
-  <q-card class="my-card">
-    <h3>VACUNAS</h3>
+  <q-form class="div-form" ref="myForm">
+    <q-card-section class="card-vaccines">
+      <q-select
+        rounded
+        outlined
+        class="q-pb-md"
+        option-value="id"
+        option-label="name"
+        v-model="selectVaccine"
+        :options="vaccines"
+        label="Ultima Vacuna"
+      />
 
-    <q-select
-      rounded
-      outlined
-      option-value="id"
-      option-label="name"
-      v-model="selectVaccine"
-      :options="vaccines"
-      label="Ultima Vacuna"
-    />
-
-    <q-card-section>
       <q-input
         rounded
         outlined
+        class="q-pb-md"
         v-model="veterinary"
+        :rules="[(val) => val.length > 0 || 'No puede estar vacio']"
         label="Veterinario de la vacuna"
       />
 
@@ -46,17 +47,18 @@
       <div>
         <q-btn
           label="Actualizar"
-          type="submit"
+          style="margin: 5% 0 5% 40%"
           color="primary"
           v-on:click="updateDog"
         />
       </div>
     </q-card-section>
-  </q-card>
+  </q-form>
 </template>
 <script>
-import axios from "axios";
+import { axios } from "../apis/axios";
 import moment from "moment";
+import constants from "../constants";
 
 export default {
   data() {
@@ -72,50 +74,58 @@ export default {
       veterinary: "",
       vaccines: [],
       selectVaccine: {},
-      urlVaccines: "http://vps-b0e4feec.vps.ovh.net:8000/api/vaccines/",
+      urlVaccines: constants.urlsApi.vaccines,
+      urlLastVaccine: constants.urlsApi.lastVaccine,
+      urlVaccine: constants.urlsApi.vaccine,
       idDog: "",
-      pero: "",
+      lastVaccineId: "",
     };
   },
   created() {
     this.idDog = this.$store.state.IdDog;
-
+    /*me traigo todas las vacunas y la id de la ultima vacuna asi creo el select dinamico con las 
+        con las vacunas que le faltan a cada perro*/
     this.getLastVaccine().then(() => {
-      axios.get(this.urlVaccines).then((e) => {
-        const response = e.data;
-
-        response.forEach((element) => {
-          if (element.id > this.pero) {
-            this.vaccines.push(element);
-          }
-        });
+      axios.get(this.urlVaccines).then((vaccines) => {
+        this.fillSelect(vaccines.data);
       });
     });
-
     this.selectVaccine = "";
   },
   methods: {
+    fillSelect(allVaccines) {
+      allVaccines.forEach((vaccine) => {
+        if (vaccine.id > this.lastVaccineId) {
+          this.vaccines.push(vaccine);
+        }
+      });
+    },
     updateDog: function() {
+      this.$refs.myForm.validate().then((success) => {
+        success ? this.saveupdateDog() : this.$q.notify(constants.alert);
+      });
+    },
+    saveupdateDog() {
       this.prepareVaccine();
-
-      /*axios
-        .post("http://vps-b0e4feec.vps.ovh.net:8000/api/vaccine/", this.vaccine)
-        .then((e) => {
-          console.log(e);
-          this.$router.push("/home");
-        });*/
+      axios
+        .post(this.urlVaccine, this.vaccine)
+        .then(() => {
+          const hide = true;
+          this.$root.$emit("expiration", this.vaccine.expiration);
+          this.$root.$emit("update", this.$store.state.IdDog);
+          this.$router.push(constants.routes.dashboard);
+        })
+        .catch((err) => alert(err.response.data.message));
     },
-    getLastVaccine: function() {
+    getLastVaccine() {
       return axios
-        .get(
-          "http://vps-b0e4feec.vps.ovh.net:8000/api/lastVaccine/" + this.idDog
-        )
-        .then((e) => {
-          console.log(e.data[0]);
-          this.pero = e.data[0].vaccines_id;
-        });
+        .get(this.urlLastVaccine + this.idDog)
+        .then((lastVaccine) => {
+          this.lastVaccineId = lastVaccine.data[0].vaccines_id;
+        })
+        .catch((err) => alert(err.response.data.message));
     },
-    createVaccine: function(vaccine) {
+    createVaccine(vaccine) {
       this.vaccine.Nombre = vaccine.name;
       this.vaccine.Veterinario = vaccine.veterinary;
       this.vaccine.FechaVacunacion = vaccine.vaccination_date;
@@ -128,8 +138,17 @@ export default {
       this.vaccine.expiration = moment(this.vaccine.vaccination_date)
         .add(this.selectVaccine.days, "days")
         .format("YYYY-MM-DD");
-      this.$root.$emit("expiration", this.vaccine.expiration);
     },
   },
 };
 </script>
+<style scoped>
+.div-form {
+  max-width: 30%;
+  margin-left: 40%;
+  border-radius: 5%;
+}
+.card-vaccines {
+  border-radius: 5%;
+}
+</style>

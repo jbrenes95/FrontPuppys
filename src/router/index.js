@@ -5,34 +5,26 @@ import dashboard from "../views/Dashboard.vue";
 import create from "../views/Create.vue";
 import login from "../views/Login.vue";
 import register from "../views/Register.vue";
-import home from "../components/HelloWorld.vue";
-import edituser from "../views/Edituser.vue";
+import editdog from "../views/Editdog.vue";
+import settings from "../views/Settings.vue";
+import updateVaccines from "../views/UpdateVaccines.vue";
 import firebase from "firebase";
 
 Vue.use(VueRouter);
 let router = new VueRouter({
  
   routes: [
-    { path: '/', component: dashboard, meta: { requiresAuth: true } },
-    { path: '/create', component: create, meta: { requiresAuth: true } },
-    { path: '/home', component: home, meta: { requiresAuth: true } },
+    { path: '/', component: dashboard, meta: { requiresAuth: true }},
+    { path: '/create', component: create, meta: { requiresAuth: true }},
     { path: '/login', component: login, meta: { requiresGuest: true }},
-    { path: '/register', component: register, meta: { requiresGuest: true } },
-    { path: '/edit', component: edituser, meta: { requiresAuth: true } },
-    
-    
-
-    {
-      path: "/about",
-      name: "About",
-
-      component: () =>
-        import(/* webpackChunkName: "about" */ "../views/About.vue"),
-    },
+    { path: '/register', component: register, meta: { requiresGuest: true }},
+    { path: '/edit', component: editdog, meta: { requiresAuth: true }},
+    { path: '/settings', component: settings, meta: { requiresAuth: true }},
+    { path: '/editvaccines', component: updateVaccines, meta: { requiresAuth: true }},
   ]
 });
 
-/*router.beforeEach((to, from, next) => {
+router.beforeEach((to, from, next) => {
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   const isAuthenticated = firebase.auth().currentUser
   if(isAuthenticated && (to.path === '/login'|| to.path === '/register') ) {
@@ -53,11 +45,10 @@ let router = new VueRouter({
   } else {
     next();
   }
-}) */
+}) 
 
 
-router.beforeEach((to,from,next)=>{
-    
+/*router.beforeEach((to,from,next)=>{
   if(to.matched.some(record=> record.meta.requiresAuth )){
     if(!firebase.auth().currentUser){
 
@@ -67,12 +58,12 @@ router.beforeEach((to,from,next)=>{
           redirect: to.fullPath
         }
       });
+      // return
     }else{
       next();
     }
   }else if(to.matched.some(record=> record.meta.requiresGuest)){
     if(firebase.auth().currentUser){
-
       next({
         path:'/',
         query:{
@@ -85,6 +76,6 @@ router.beforeEach((to,from,next)=>{
   }else {
     next();
   }
-});
+});*/
 
 export default router;
